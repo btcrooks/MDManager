@@ -1,0 +1,12 @@
+*.DS_Store
+*.swp
+*.swo
+*.pyc
+__pycache__
+.ropeproject
+ref/
+MoonDocks.wiki
+savedGames/
+player.db
+game.db
+db
