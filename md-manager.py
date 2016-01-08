@@ -72,11 +72,11 @@ class MDManager(cmd.Cmd, object):
     md = MDManager
     if md.dbSimpleStatus(): return
     elif not args:
-      _key = list(md.dbData.keys())
-      _val = list(md.dbData.values())
-      for i in range(len(_key)):
+      db_data_key = list(md.dbData.keys())
+      db_data_val = list(md.dbData.values())
+      for i in range(len(db_data_key)):
         print('')
-        print(_key[i], '=', _val[i])
+        print(db_data_key[i], '=', db_data_val[i])
     else:
       print('Unknown command: %s' % (args))
 
