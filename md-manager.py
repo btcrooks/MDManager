@@ -72,11 +72,11 @@ class MDManager(cmd.Cmd, object):
     md = MDManager
     if md.dbSimpleStatus(): return
     elif not args:
-      _key = list(md.dbData.keys())
-      _val = list(md.dbData.values())
-      for i in range(len(_key)):
+      db_data_key = list(md.dbData.keys())
+      db_data_val = list(md.dbData.values())
+      for i in range(len(db_data_key)):
         print('')
-        print(_key[i], '=', _val[i])
+        print(db_data_key[i], '=', db_data_val[i])
     else:
       print('Unknown command: %s' % (args))
 
@@ -86,8 +86,7 @@ class MDManager(cmd.Cmd, object):
     insert_usage = 'Usage: insert «key» [«key», «value»]'
     args = args.split(' ')
 
-    if md.dbSimpleStatus():
-      return
+    if md.dbSimpleStatus(): return
     elif not args or len(args) <= 2:
       print(insert_usage)
       return
@@ -223,7 +222,7 @@ class MDManager(cmd.Cmd, object):
                 )
           db_index += 1
       print('''
-Available database(s): {0}{1}{2} '''.format('\033[95m', _index, '\033[0m'))
+Available database(s): {0}{1}{2} '''.format('\033[95m', db_index, '\033[0m'))
 
   def do_exit(self, args):
     '''Exit MoonDocks db Manager'''
