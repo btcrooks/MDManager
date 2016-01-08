@@ -4,7 +4,7 @@
 import cmd
 import os
 import shelve
-from utils import input_prefill
+from lib import input_prefill
 
 class MDManager(cmd.Cmd, object):
 
