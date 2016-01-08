@@ -4,6 +4,7 @@
 import cmd
 import os
 import shelve
+from utils import input_prefill
 
 class MDManager(cmd.Cmd, object):
 
@@ -16,8 +17,14 @@ class MDManager(cmd.Cmd, object):
   dbPath = './db/'
   database = None
   dbData = None
-  prompt = '''{gray}Moondocks Manager: {purple}{db}{nc}
-❯❯ '''.format(purple = purple, gray = gray, nc = nc, db = database)
+  prompt = '''{gray}Moondocks Manager: {dbp}{purple}{db}{nc}
+❯❯ '''.format(
+    purple = purple,
+    gray = gray,
+    nc = nc,
+    db = database,
+    dbp = dbPath
+  )
 
   def __init__(self):
     mdm = MDManager
@@ -33,6 +40,7 @@ class MDManager(cmd.Cmd, object):
     - {purple}list{nc}:   Lists available databases
     - {purple}create{nc}: Creates a new database
     - {purple}find{nc}:   Display all documents
+    - {purple}insert{nc}: Inserts «key» «value» into database
     - {purple}help{nc}:   Display help
 
     *Note: Use tab to autocomplete commands.
@@ -53,7 +61,7 @@ class MDManager(cmd.Cmd, object):
     if args:
       print('Too many arguments.')
       return
-    md.closedb(md.database)
+    md.closedb()
 
   def do_list(self, args):
     '''List databases'''
@@ -75,14 +83,42 @@ class MDManager(cmd.Cmd, object):
   def do_insert(self, args):
     '''Insert data into the database'''
     md = MDManager
-    if md.dbSimpleStatus(): return
+    _usage = 'Usage: insert «key» [«key», «value»]'
+
+    if md.dbSimpleStatus():
+      return
+    elif not args:
+      print(_usage)
+      return
+    elif len(args.split(' ')) <= 2:
+      print(_usage)
+      return
+    else:
+      _data = args.split(' ')
+      _insert_key = _data[0]
+      del _data[0]
+      _i = iter(_data)
+      _dict = dict(zip(_i, _i))
+      print(_insert_key, ':', _dict)
+      askInsert = input('\nInsert? [y/n/edit]: ').lower()
+      if askInsert == 'y':
+        pass
+      elif askInsert in ['e', 'edit']:
+        input_prefill('edit: ', str(args))
+        pass
+      else:
+        print('Aborting insert...')
+        return
+
+      # shelve insert data
+      md.dbData[_insert_key] = _dict
 
   ## Core commands
 
   def dbSimpleStatus():
     '''Simplified dbStatus()'''
     self = MDManager
-    if self.database is None:
+    if self.database is None and self.dbData is None:
       print('No database open.')
       self.opendb('')
       return True
@@ -110,22 +146,24 @@ class MDManager(cmd.Cmd, object):
       for filename in filenames:
         MDManager.dbCache.append(filename)
 
-  def closedb(db):
+  def closedb():
     '''Close an open database'''
     self = MDManager
 
-    if not db:
-      db = self.database
-    askClose = input('\nWould you like to close it now? [y/n]: ').lower()
-    if askClose == 'y':
-      print('closing db...')
+    if self.database is None:
+      return
     else:
-      return False
+      askClose = input('\nWould you like to close it now? [y/n]: ').lower()
+      if askClose == 'y':
+        print('closing db...')
+      else:
+        return False
 
-    self.database = None
-    # shelve close db
-    if self.dbData is not None: self.dbData.close()
-    return True
+      self.database = None
+      self.dbData = None
+      # shelve close db
+      if self.dbData is not None: self.dbData.close()
+      return True
 
   def opendb(db):
     '''Open a database'''
@@ -134,7 +172,7 @@ class MDManager(cmd.Cmd, object):
     # Check if there is an open db
     if db == self.database: return
     if self.dbStatus(db):
-      if self.closedb(db): pass
+      if self.closedb(): pass
       else: return
     # Scrub data
     if not db:
@@ -177,12 +215,15 @@ class MDManager(cmd.Cmd, object):
     for dirname, dirnames, filenames in os.walk(self.dbPath):
       print('└── ' + self.dbPath)
       for filename in filenames:
-        print('   └── '
-              + '\033[95m'
-              + os.path.join(filename)
-              + '\033[0m'
-              )
-        _index += 1
+        if '.db' not in filename:
+          print('   └── ' + os.path.join(filename))
+        else:
+          print('   └── '
+                + '\033[95m'
+                + os.path.join(filename)
+                + '\033[0m'
+                )
+          _index += 1
       print('''
 Available database(s): {0}{1}{2} '''.format('\033[95m', _index, '\033[0m'))
 
@@ -192,7 +233,7 @@ Available database(s): {0}{1}{2} '''.format('\033[95m', _index, '\033[0m'))
     if args:
       print('Too many arguments.')
       return
-    md.closedb(md.database)
+    md.closedb()
     return -1
 
   def do_EOF(self, args):
@@ -223,8 +264,15 @@ Available database(s): {0}{1}{2} '''.format('\033[95m', _index, '\033[0m'))
     '''Post command processing'''
     md = MDManager
     print('') # adds an empty space
-    md.prompt = '''{gray}Moondocks Manager: {purple}{db}{nc}
-❯❯ '''.format(purple = md.purple, gray = md.gray, nc = md.nc, db = md.database)
+    md.prompt = '''{gray}Moondocks Manager: {dbp}{purple}{db}{nc}
+❯❯ '''.format(
+      purple = md.purple,
+      gray = md.gray,
+      nc = md.nc,
+      db = md.database,
+      dbp = md.dbPath
+    )
+
     return stop
 
   def preloop(self):
