@@ -83,35 +83,33 @@ class MDManager(cmd.Cmd, object):
   def do_insert(self, args):
     '''Insert data into the database'''
     md = MDManager
-    _usage = 'Usage: insert «key» [«key», «value»]'
+    insert_usage = 'Usage: insert «key» [«key», «value»]'
+    args = args.split(' ')
 
     if md.dbSimpleStatus():
       return
-    elif not args:
-      print(_usage)
-      return
-    elif len(args.split(' ')) <= 2:
-      print(_usage)
+    elif not args or len(args) <= 2:
+      print(insert_usage)
       return
     else:
-      _data = args.split(' ')
-      _insert_key = _data[0]
-      del _data[0]
-      _i = iter(_data)
-      _dict = dict(zip(_i, _i))
-      print(_insert_key, ':', _dict)
+      insert_key = args[0]
+      del args[0]
+      i = iter(args)
+      new_dict = dict(zip(i, i))
+      print(insert_key, ':', new_dict)
       askInsert = input('\nInsert? [y/n/edit]: ').lower()
       if askInsert == 'y':
         pass
       elif askInsert in ['e', 'edit']:
-        input_prefill('edit: ', str(args))
+        edit_string = insert_key + ' ' + ' '.join(args)
+        input_prefill('edit: ', edit_string)
         pass
       else:
         print('Aborting insert...')
         return
 
       # shelve insert data
-      md.dbData[_insert_key] = _dict
+      md.dbData[insert_key] = new_dict
 
   ## Core commands
 
@@ -211,7 +209,7 @@ class MDManager(cmd.Cmd, object):
   def listdb():
     '''List db'''
     self = MDManager
-    _index = 0
+    db_index = 0
     for dirname, dirnames, filenames in os.walk(self.dbPath):
       print('└── ' + self.dbPath)
       for filename in filenames:
@@ -223,7 +221,7 @@ class MDManager(cmd.Cmd, object):
                 + os.path.join(filename)
                 + '\033[0m'
                 )
-          _index += 1
+          db_index += 1
       print('''
 Available database(s): {0}{1}{2} '''.format('\033[95m', _index, '\033[0m'))
 
