@@ -77,6 +77,9 @@ class MDManager(cmd.Cmd, object):
       for i in range(len(db_data_key)):
         print('')
         print(db_data_key[i], '=', db_data_val[i])
+    elif len(args.split(' ')) == 1:
+      if args in md.dbData.keys():
+        print(md.dbData.keys(), '=', md.dbData[args])
     else:
       print('Unknown command: %s' % (args))
 
