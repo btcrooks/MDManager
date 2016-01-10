@@ -6,28 +6,142 @@ import os
 import shelve
 from lib import input_prefill
 
-class MDManager(cmd.Cmd, object):
+class Colorize(object):
+  def __init__(self):
+    self.purple='\033[95m'
+    self.gray='\033[1;30m'
+    self.nc='\033[0m'
 
-  # Colorize
-  purple='\033[95m'
-  gray='\033[1;30m'
-  nc='\033[0m'
+class DbUtil(object):
 
-  dbCache = []
-  dbPath = './db/'
-  database = None
-  dbData = None
-  prompt = '''{gray}Moondocks Manager: {dbp}{purple}{db}{nc}
-❯❯ '''.format(
-    purple = purple,
-    gray = gray,
-    nc = nc,
-    db = database,
-    dbp = dbPath
+  def __init__(self):
+    self.dbCache = []
+    self.dbPath = './db/'
+    self.database = None
+    self.dbData = None
+
+  def sayHello(self):
+    print('Hello')
+    print(self.dbPath)
+
+  # General
+  def add_db_ext(self, data):
+    '''Append .db in extension'''
+    if '.db' not in data:
+      data = data + '.db'
+    return data
+
+  # Database
+  def open_database(self, db):
+    '''Open a database'''
+
+    if not db:
+      db = input('\nWhich database would you like to open?: ')
+      if db == 'list':
+        self.list_databases()
+        self.open_database(None)
+        return
+      elif not db: return
+
+    if db == self.database:
+      print('%s is already open' % (self.database))
+      return
+    if self.databse_is_open():
+      if not self.close_database(): return
+
+    db = DbUtil.add_db_ext(db)
+    if db not in DbUtil.dbCache:
+      print('The database {purple}{db}{nc} doesn\'t exist.'.format(
+              purple = self.purple,
+              db = db,
+              nc = self.nc))
+      askCreate = input('\nWould you like to create it now? [y/n]: ').lower()
+      if askCreate == 'y':
+        print('creating db...')
+      else:
+        return
+
+    # Set current db
+    self.database = db
+    print('Opening database {purple}{db}{nc}'.format(
+           purple = self.purple,
+           db = self.dbPath + db,
+           nc = self.nc))
+
+    # shelve open db
+    self.dbData = shelve.open(self.dbPath + db, writeback=True)
+    print(self.dbData)
+  def databse_is_open(self):
+    '''Check if there if there is an open database'''
+    if self.database is None and self.dbData is None:
+      print('No database open.')
+      # self.opendb('')
+      return True
+    else:
+      return False
+
+  def close_database(self):
+    '''Close an open database'''
+
+    if self.database is None:
+      return
+    else:
+      askClose = input('\nWould you like to close it now? [y/n]: ').lower()
+      if askClose == 'y':
+        print('closing db...')
+        self.database = self.dbData = None
+        # shelve close db
+        if self.dbData is not None: self.dbData.close()
+        return True
+      else:
+        return False
+
+  def update_db_cache(self):
+    '''Update list of available databases'''
+
+    self.dbCache = [] # Clear cache
+
+    for dirname, dirnames, filenames in os.walk(self.dbPath):
+      for filename in filenames:
+        DbUtil.dbCache.append(filename)
+
+  def list_databases(self):
+    '''List databases'''
+    db_index = 0
+    directory = '└── '
+    sub_directory = '   └── '
+
+    for dirname, dirnames, filenames in os.walk(self.dbPath):
+      print(directory + self.dbPath)
+      for filename in filenames:
+        if '.db' in filename:
+          print(sub_directory + Colorize.purple
+                + os.path.join(filename) + Colorize.nc)
+          db_index += 1
+        else:
+          print(sub_directory + os.path.join(filename))
+    print('Available database(s): {0}{1}{2}'.format(
+          Colorize.purple, db_index, Colorize.nc))
+
+
+
+Colorize = Colorize()
+DbUtil = DbUtil()
+
+class DbInterface(cmd.Cmd):
+
+  def do_hello(self, args):
+    DbUtil.sayHello()
+
+  prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯ '.format(
+    purple = Colorize.purple,
+    gray = Colorize.gray,
+    nc = Colorize.nc,
+    db = DbUtil.database,
+    dbp = DbUtil.dbPath
   )
 
   def __init__(self):
-    mdm = MDManager
     cmd.Cmd.__init__(self)
     self.ruler = '-'
     self.intro = '''
@@ -45,7 +159,7 @@ class MDManager(cmd.Cmd, object):
 
     *Note: Use tab to autocomplete commands.
 
-    '''.format(purple=mdm.purple, nc=mdm.nc)
+    '''.format(purple=Colorize.purple, nc=Colorize.nc)
 
   ## Database commands
 
@@ -53,45 +167,40 @@ class MDManager(cmd.Cmd, object):
     '''Open an existing database'''
     # TODO: add db autocompletion
     if args and '.db' not in args: args = args + '.db'
-    MDManager.opendb(args)
+    DbInterface.opendb(args)
 
   def do_close(self, args):
     '''Close an open database'''
-    md = MDManager
-    if args:
-      print('Too many arguments.')
-      return
-    md.closedb()
+    DbUtil.close_database()
 
   def do_list(self, args):
     '''List databases'''
-    MDManager.listdb()
+    DbUtil.list_databases()
 
   def do_find(self, args):
     '''Display all documents'''
-    md = MDManager
-    if md.dbSimpleStatus(): return
+    if DbUtil.databse_is_open(): return
     elif not args:
-      db_data_key = list(md.dbData.keys())
-      db_data_val = list(md.dbData.values())
+      db_data_key = list(DbUtil.dbData.keys())
+      db_data_val = list(DbUtil.dbData.values())
       for i in range(len(db_data_key)):
         print('')
         print(db_data_key[i], '=', db_data_val[i])
     elif len(args.split(' ')) == 1:
-      if args in md.dbData.keys():
-        print(md.dbData.keys(), '=', md.dbData[args])
+      if args in DbUtil.dbData.keys():
+        print(DbUtil.dbData.keys(), '=', DbUtil.dbData[args])
     else:
       print('Unknown command: %s' % (args))
 
   def do_insert(self, args):
     '''Insert data into the database'''
-    md = MDManager
-    insert_usage = 'Usage: insert «key» [«key», «value»]'
+    md = DbInterface
+    usage = 'Usage: insert «key» [«key», «value»]'
     args = args.split(' ')
 
     if md.dbSimpleStatus(): return
     elif not args or len(args) <= 2:
-      print(insert_usage)
+      print(usage)
       return
     else:
       insert_key = args[0]
@@ -115,19 +224,10 @@ class MDManager(cmd.Cmd, object):
 
   ## Core commands
 
-  def dbSimpleStatus():
-    '''Simplified dbStatus()'''
-    self = MDManager
-    if self.database is None and self.dbData is None:
-      print('No database open.')
-      self.opendb('')
-      return True
-    else:
-      return False
 
   def dbStatus(db):
     '''Check if there is an open database'''
-    self = MDManager
+    self = DbInterface
     if self.database is not None:
       print('The database {purple}{db}{nc} is open.'.format(
         purple = self.purple,
@@ -138,102 +238,13 @@ class MDManager(cmd.Cmd, object):
     else:
       return False
 
-  def updatedbCache():
-    '''Update the list of available db'''
-    self = MDManager
-    self.dbCache = []
-    for dirname, dirnames, filenames in os.walk(MDManager.dbPath):
-      for filename in filenames:
-        MDManager.dbCache.append(filename)
 
-  def closedb():
-    '''Close an open database'''
-    self = MDManager
 
-    if self.database is None:
-      return
-    else:
-      askClose = input('\nWould you like to close it now? [y/n]: ').lower()
-      if askClose == 'y':
-        print('closing db...')
-      else:
-        return False
 
-      self.database = None
-      self.dbData = None
-      # shelve close db
-      if self.dbData is not None: self.dbData.close()
-      return True
-
-  def opendb(db):
-    '''Open a database'''
-    self = MDManager
-
-    # Check if there is an open db
-    if db == self.database: return
-    if self.dbStatus(db):
-      if self.closedb(): pass
-      else: return
-    # Scrub data
-    if not db:
-      db = input('\nWhich database would you like to open?: ')
-      if db == 'list':
-        self.listdb()
-        self.opendb('')
-        return
-      elif not db: return
-    # Check for prexisting db
-    if '.db' not in db: db = db + '.db'
-    if db not in self.dbCache:
-      print('The database {purple}{db}{nc} doesn\'t exist.'.format(
-        purple = self.purple,
-        db = db,
-        nc = self.nc
-      ))
-      askCreate = input('\nWould you like to create it now? [y/n]: ').lower()
-      if askCreate == 'y':
-        print('creating db...')
-      else:
-        return
-
-    # Set current db
-    self.database = db
-    print('Opening database {purple}{db}{nc}'.format(
-      purple = self.purple,
-      db = self.dbPath + db,
-      nc = self.nc
-    ))
-
-    # shelve open db
-    self.dbData = shelve.open(self.dbPath + db, writeback=True)
-    print(self.dbData)
-
-  def listdb():
-    '''List db'''
-    self = MDManager
-    db_index = 0
-    for dirname, dirnames, filenames in os.walk(self.dbPath):
-      print('└── ' + self.dbPath)
-      for filename in filenames:
-        if '.db' not in filename:
-          print('   └── ' + os.path.join(filename))
-        else:
-          print('   └── '
-                + '\033[95m'
-                + os.path.join(filename)
-                + '\033[0m'
-                )
-          db_index += 1
-      print('''
-Available database(s): {0}{1}{2} '''.format('\033[95m', db_index, '\033[0m'))
 
   def do_exit(self, args):
-    '''Exit MoonDocks db Manager'''
-    md = MDManager
-    if args:
-      print('Too many arguments.')
-      return
-    md.closedb()
+    '''Exit interface'''
+    if DbUtil.databse_is_open(): DbUtil.close_database()
     return -1
 
   def do_EOF(self, args):
@@ -257,20 +268,18 @@ Available database(s): {0}{1}{2} '''.format('\033[95m', db_index, '\033[0m'))
 
   def precmd(self, line):
     """Pre command processing"""
-    MDManager.updatedbCache()
+    DbUtil.update_db_cache()
     return line
 
   def postcmd(self, stop, line):
     '''Post command processing'''
-    md = MDManager
     print('') # adds an empty space
-    md.prompt = '''{gray}Moondocks Manager: {dbp}{purple}{db}{nc}
-❯❯ '''.format(
-      purple = md.purple,
-      gray = md.gray,
-      nc = md.nc,
-      db = md.database,
-      dbp = md.dbPath
+    DbInterface.prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯'.format(
+      purple = Colorize.purple,
+      gray = Colorize.gray,
+      nc = Colorize.nc,
+      db = DbUtil.database,
+      dbp = DbUtil.dbPath
     )
 
     return stop
@@ -291,5 +300,5 @@ Available database(s): {0}{1}{2} '''.format('\033[95m', db_index, '\033[0m'))
 
 if __name__ == '__main__':
   os.system('clear')
-  mdmanager = MDManager()
-  mdmanager.cmdloop()
+  interface = DbInterface()
+  interface.cmdloop()
