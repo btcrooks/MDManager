@@ -1,7 +1,15 @@
+# Finder
 *.DS_Store
+
+# Vim
 *.swp
 *.swo
+
+# Python
+.python-version
 *.pyc
 __pycache__
 .ropeproject
+
+# Project specific
 db
