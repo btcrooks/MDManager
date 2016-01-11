@@ -40,7 +40,6 @@ class DbUtil(object):
 
   def open_database(self, db):
     '''Open a database'''
-
     if not db:
       db = input('\nWhich database would you like to open?: ')
       if db == 'list':
