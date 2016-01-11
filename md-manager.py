@@ -4,13 +4,7 @@
 import cmd
 import os
 import shelve
-from lib import input_prefill
-
-class Colorize(object):
-  def __init__(self):
-    self.purple='\033[95m'
-    self.gray='\033[1;30m'
-    self.nc='\033[0m'
+from lib import input_prefill, Colorize
 
 class DbUtil(object):
 
@@ -20,18 +14,30 @@ class DbUtil(object):
     self.database = None
     self.dbData = None
 
-  def sayHello(self):
-    print('Hello')
-    print(self.dbPath)
+  # GENERAL
 
-  # General
   def add_db_ext(self, data):
     '''Append .db in extension'''
     if '.db' not in data:
       data = data + '.db'
     return data
 
-  # Database
+  def database_is_open(self):
+    '''Check if there if there is an open database'''
+    if self.database is None and self.dbData is None:
+      return True
+    else:
+      return False
+
+  def update_db_cache(self):
+    '''Update list of available databases'''
+    self.dbCache = [] # Clear cache
+    for dirname, dirnames, filenames in os.walk(self.dbPath):
+      for filename in filenames:
+        DbUtil.dbCache.append(filename)
+
+  # DATABASE
+
   def open_database(self, db):
     '''Open a database'''
 
@@ -41,52 +47,37 @@ class DbUtil(object):
         self.list_databases()
         self.open_database(None)
         return
-      elif not db: return
-
-    if db == self.database:
-      print('%s is already open' % (self.database))
-      return
-    if self.databse_is_open():
-      if not self.close_database(): return
+      elif not db:
+        return
 
     db = DbUtil.add_db_ext(db)
+    if self.database_is_open():
+      if not self.close_database():
+        print('Did not close database sucessfully.')
+        return
     if db not in DbUtil.dbCache:
       print('The database {purple}{db}{nc} doesn\'t exist.'.format(
-              purple = self.purple,
-              db = db,
-              nc = self.nc))
+              purple = Colorize.purple, db = db, nc = Colorize.nc))
       askCreate = input('\nWould you like to create it now? [y/n]: ').lower()
       if askCreate == 'y':
         print('creating db...')
       else:
         return
-
-    # Set current db
     self.database = db
     print('Opening database {purple}{db}{nc}'.format(
-           purple = self.purple,
-           db = self.dbPath + db,
-           nc = self.nc))
-
-    # shelve open db
-    self.dbData = shelve.open(self.dbPath + db, writeback=True)
-    print(self.dbData)
-  def databse_is_open(self):
-    '''Check if there if there is an open database'''
-    if self.database is None and self.dbData is None:
-      print('No database open.')
-      # self.opendb('')
-      return True
-    else:
-      return False
+          purple = Colorize.purple, db = self.dbPath + db, nc = Colorize.nc))
+    try:
+      self.dbData = shelve.open(self.dbPath + db, writeback=True)
+    finally:
+      print(self.dbData)
 
   def close_database(self):
     '''Close an open database'''
-
-    if self.database is None:
-      return
+    if DbUtil.database is None:
+      return True
     else:
-      askClose = input('\nWould you like to close it now? [y/n]: ').lower()
+      askClose = input('\nWould you like to close %s now? [y/n]: '
+                       % (DbUtil.database)).lower()
       if askClose == 'y':
         print('closing db...')
         self.database = self.dbData = None
@@ -96,14 +87,31 @@ class DbUtil(object):
       else:
         return False
 
-  def update_db_cache(self):
-    '''Update list of available databases'''
+  def drop_database(self, db):
+    '''Delete a databse'''
+    if not db:
+      self.list_databases()
+      ask_drop = input('\nWhich database would you like to drop?: ')
+      if not ask_drop: return
+      else: db = ask_drop
 
-    self.dbCache = [] # Clear cache
-
-    for dirname, dirnames, filenames in os.walk(self.dbPath):
-      for filename in filenames:
-        DbUtil.dbCache.append(filename)
+    self.update_db_cache()
+    db = self.add_db_ext(db)
+    if db == self.database:
+      self.close_database(None)
+    if db not in self.dbCache:
+      print('%s doesn\'t exist.' % (db))
+    else:
+      ask_delete = input('Are you sure you want to delete %s?: [y/n] '
+                         % (db)).lower()
+      if ask_delete == 'y':
+        try:
+          os.remove(self.dbPath + db)
+        finally:
+          print('Deleted %s' % (db))
+      else:
+        print('Aborting...')
+        return
 
   def list_databases(self):
     '''List databases'''
@@ -130,9 +138,6 @@ DbUtil = DbUtil()
 
 class DbInterface(cmd.Cmd):
 
-  def do_hello(self, args):
-    DbUtil.sayHello()
-
   prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯ '.format(
     purple = Colorize.purple,
     gray = Colorize.gray,
@@ -153,6 +158,7 @@ class DbInterface(cmd.Cmd):
     - {purple}close{nc}:  Closes the current database
     - {purple}list{nc}:   Lists available databases
     - {purple}create{nc}: Creates a new database
+    - {purple}drop{nc}:   Deletes a database
     - {purple}find{nc}:   Display all documents
     - {purple}insert{nc}: Inserts «key» «value» into database
     - {purple}help{nc}:   Display help
@@ -163,15 +169,34 @@ class DbInterface(cmd.Cmd):
 
   ## Database commands
 
+  def do_create(self, args):
+    """Create a new database"""
+    if not args:
+      ask_create = input('\nNew database name?: ')
+      if not ask_create:
+        print('Aborting...')
+        return
+      else:
+        args = ask_create
+    DbUtil.open_database(args)
+
   def do_open(self, args):
     '''Open an existing database'''
     # TODO: add db autocompletion
-    if args and '.db' not in args: args = args + '.db'
-    DbInterface.opendb(args)
+    if DbUtil.add_db_ext(args) == DbUtil.database:
+      print('%s is already open' % (self.database))
+    else:
+      DbUtil.close_database()
+      DbUtil.open_database(args)
 
   def do_close(self, args):
     '''Close an open database'''
     DbUtil.close_database()
+
+  def do_drop(self, args):
+    """Delete a database"""
+    DbUtil.drop_database(args)
+
 
   def do_list(self, args):
     '''List databases'''
@@ -179,7 +204,7 @@ class DbInterface(cmd.Cmd):
 
   def do_find(self, args):
     '''Display all documents'''
-    if DbUtil.databse_is_open(): return
+    if DbUtil.database_is_open(): return
     elif not args:
       db_data_key = list(DbUtil.dbData.keys())
       db_data_val = list(DbUtil.dbData.values())
@@ -194,11 +219,12 @@ class DbInterface(cmd.Cmd):
 
   def do_insert(self, args):
     '''Insert data into the database'''
-    md = DbInterface
-    usage = 'Usage: insert «key» [«key», «value»]'
+    usage = 'Usage: insert «dict» «key» «value»'
     args = args.split(' ')
 
-    if md.dbSimpleStatus(): return
+    if DbUtil.database_is_open():
+      print('You need an open database first. Run \'open\'')
+      return
     elif not args or len(args) <= 2:
       print(usage)
       return
@@ -220,31 +246,14 @@ class DbInterface(cmd.Cmd):
         return
 
       # shelve insert data
-      md.dbData[insert_key] = new_dict
-
-  ## Core commands
-
-
-  def dbStatus(db):
-    '''Check if there is an open database'''
-    self = DbInterface
-    if self.database is not None:
-      print('The database {purple}{db}{nc} is open.'.format(
-        purple = self.purple,
-        db = self.database,
-        nc = self.nc
-      ))
-      return True
-    else:
-      return False
-
-
-
-
+      DbUtil.dbData[insert_key] = new_dict
 
   def do_exit(self, args):
     '''Exit interface'''
-    if DbUtil.databse_is_open(): DbUtil.close_database()
+    if DbUtil.database_is_open():
+      if not DbUtil.close_database():
+        print('Did not close the database sucessfully')
+        return
     return -1
 
   def do_EOF(self, args):
@@ -274,7 +283,7 @@ class DbInterface(cmd.Cmd):
   def postcmd(self, stop, line):
     '''Post command processing'''
     print('') # adds an empty space
-    DbInterface.prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯'.format(
+    DbInterface.prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯ '.format(
       purple = Colorize.purple,
       gray = Colorize.gray,
       nc = Colorize.nc,
