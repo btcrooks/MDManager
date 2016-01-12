@@ -49,7 +49,7 @@ class DbUtil(object):
       elif not db:
         return
 
-    db = DbUtil.add_db_ext(db)
+    db = self.add_db_ext(db)
     if self.database_is_open():
       if not self.close_database():
         print('Did not close database sucessfully.')
