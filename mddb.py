@@ -130,11 +130,6 @@ class DbUtil(object):
     print('Available database(s): {0}{1}{2}'.format(
           Colorize.purple, db_index, Colorize.nc))
 
-
-
-Colorize = Colorize()
-DbUtil = DbUtil()
-
 class DbInterface(cmd.Cmd):
 
   prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯ '.format(
@@ -307,5 +302,7 @@ class DbInterface(cmd.Cmd):
 
 if __name__ == '__main__':
   os.system('clear')
+  Colorize = Colorize()
+  DbUtil = DbUtil()
   interface = DbInterface()
   interface.cmdloop()
