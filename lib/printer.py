@@ -33,7 +33,3 @@ class Printer(object):
       print('{msg0} {c}{msg1}{nc} {msg2}'.format(
         c = self.purple, msg0 = args[0], nc = self.nc,
         msg1 = args[1], msg2 = args[2]))
-
-printer = Printer()
-printer.hi('Woah!', 'more', 'stuff')
-printer.err('Woah!!! stop')
