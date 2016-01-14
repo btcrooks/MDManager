@@ -4,7 +4,12 @@
 import cmd
 import os
 import shelve
-from lib import input_prefill, Colorize
+from lib.input_prefill import input_prefill
+from lib.colorize import Colorize
+from lib.printer import Printer
+
+Colorize = Colorize()
+printer = Printer()
 
 class DbUtil(object):
 
@@ -130,6 +135,8 @@ class DbUtil(object):
     print('Available database(s): {0}{1}{2}'.format(
           Colorize.purple, db_index, Colorize.nc))
 
+DbUtil = DbUtil()
+
 class DbInterface(cmd.Cmd):
 
   prompt = '{gray}Moondocks Manager: {dbp}{purple}{db}{nc}\n❯❯ '.format(
@@ -164,7 +171,7 @@ class DbInterface(cmd.Cmd):
   ## Database commands
 
   def do_create(self, args):
-    """Create a new database"""
+    '''Create a new database'''
     if not args:
       ask_create = input('\nNew database name?: ')
       if not ask_create:
@@ -188,7 +195,7 @@ class DbInterface(cmd.Cmd):
     DbUtil.close_database()
 
   def do_drop(self, args):
-    """Delete a database"""
+    '''Delete a database'''
     DbUtil.drop_database(args)
 
   def do_list(self, args):
@@ -197,7 +204,9 @@ class DbInterface(cmd.Cmd):
 
   def do_find(self, args):
     '''Display all documents'''
-    if DbUtil.database_is_open(): return
+    if DbUtil.database_is_open():
+      print('You need an open database first. Run \'open\'')
+      return
     elif not args:
       db_data_key = list(DbUtil.dbData.keys())
       db_data_val = list(DbUtil.dbData.values())
@@ -207,8 +216,6 @@ class DbInterface(cmd.Cmd):
     elif len(args.split(' ')) == 1:
       if args in DbUtil.dbData.keys():
         print(DbUtil.dbData.keys(), '=', DbUtil.dbData[args])
-    else:
-      print('Unknown command: %s' % (args))
 
   def do_insert(self, args):
     '''Insert data into the database'''
@@ -245,7 +252,7 @@ class DbInterface(cmd.Cmd):
     '''Exit interface'''
     if DbUtil.database_is_open():
       if not DbUtil.close_database():
-        print('Did not close the database sucessfully')
+        printer.err('Did not close the database sucessfully')
         return
     return -1
 
@@ -269,7 +276,7 @@ class DbInterface(cmd.Cmd):
   #################################################
 
   def precmd(self, line):
-    """Pre command processing"""
+    '''Pre command processing'''
     DbUtil.update_db_cache()
     return line
 
@@ -302,7 +309,5 @@ class DbInterface(cmd.Cmd):
 
 if __name__ == '__main__':
   os.system('clear')
-  Colorize = Colorize()
-  DbUtil = DbUtil()
   interface = DbInterface()
   interface.cmdloop()
