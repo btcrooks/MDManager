@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import cmd
-import os
-import shelve
+import cmd, os, shelve
 from lib.input_prefill import input_prefill
 from lib.colorize import Colorize
 from lib.printer import Printer
