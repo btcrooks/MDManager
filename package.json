@@ -1,0 +1,19 @@
+{
+  "name": "mddb",
+  "version": "0.0.1",
+  "description": "MoonDocks db Manager",
+  "main": "mddb.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btcrooks/MDdb.git"
+  },
+  "author": "Brandon Crooks <crookrb@gmail.com> (http://brandoncrooks.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/btcrooks/MDdb/issues"
+  },
+  "homepage": "https://github.com/btcrooks/MDdb#readme"
+}
