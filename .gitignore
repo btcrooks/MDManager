@@ -5,6 +5,9 @@
 *.swp
 *.swo
 
+# Node
+node_modules/
+
 # Python
 .python-version
 *.pyc

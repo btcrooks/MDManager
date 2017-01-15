@@ -15,5 +15,11 @@
   "bugs": {
     "url": "https://github.com/btcrooks/MDdb/issues"
   },
-  "homepage": "https://github.com/btcrooks/MDdb#readme"
+  "homepage": "https://github.com/btcrooks/MDdb#readme",
+  "dependencies": {
+    "python-shell": "^0.3.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.0"
+  }
 }
